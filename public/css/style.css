@@ -1,1 +1,272 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap");
 
+:root {
+  --cream: #faf3e7;
+  --cream-2: #f2e8d6;
+  --cocoa: #362013;
+  --cocoa-soft: #6b5443;
+  --butter: #e7b740;
+  --butter-dark: #c99a24;
+  --caramel: #a85c2a;
+  --line: #ddcba6;
+  --danger: #b33a3a;
+  --danger-bg: #f6e2df;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--cream);
+  color: var(--cocoa);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.app-shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+header.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+header.top .brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+header.top .brand .mark {
+  font-family: "Fraunces", serif;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+header.top .brand .tag {
+  font-size: 12px;
+  color: var(--cocoa-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+nav.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+}
+
+nav.tabs a {
+  text-decoration: none;
+  color: var(--cocoa-soft);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  top: 1px;
+}
+
+nav.tabs a.active {
+  color: var(--cocoa);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-bottom: 1px solid #fff;
+  font-weight: 600;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.card h2 { font-size: 18px; margin-bottom: 14px; }
+.card h3 { font-size: 15px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cocoa-soft);
+}
+
+.field input, .field select {
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--cream);
+  color: var(--cocoa);
+}
+
+.field input:focus, .field select:focus, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 1px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.row-3 {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+button {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  padding: 9px 15px;
+  cursor: pointer;
+  transition: transform 0.05s ease;
+}
+
+button:active { transform: scale(0.98); }
+
+.btn-primary { background: var(--butter); color: var(--cocoa); border-color: var(--butter-dark); }
+.btn-primary:hover { background: var(--butter-dark); }
+
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--cocoa-soft); }
+.btn-ghost:hover { border-color: var(--caramel); color: var(--caramel); }
+
+.btn-danger { background: var(--danger-bg); color: var(--danger); border-color: #e3bdb8; }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+
+.btn-small { padding: 5px 10px; font-size: 12px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cocoa-soft); }
+td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; }
+
+.list-table tr:last-child td { border-bottom: none; }
+.list-table .actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.item-row {
+  display: grid;
+  grid-template-columns: 1fr 110px auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.item-row .weight-suffix { font-size: 12px; color: var(--cocoa-soft); margin-left: 4px; }
+
+.empty {
+  color: var(--cocoa-soft);
+  font-size: 13.5px;
+  padding: 18px 0;
+  text-align: center;
+}
+
+.mono { font-family: "IBM Plex Mono", monospace; }
+
+/* --- receipt / stamp signature element (หน้าแรก) --- */
+.receipt {
+  background: #fff;
+  border: 1px dashed var(--caramel);
+  border-radius: 4px;
+  padding: 22px 22px 18px;
+  position: relative;
+}
+
+.receipt::before, .receipt::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 10px;
+  background:
+    radial-gradient(circle at 8px 0, transparent 8px, var(--cream) 8.5px) top left / 16px 16px repeat-x;
+}
+.receipt::before { top: -1px; }
+.receipt::after { bottom: -1px; transform: rotate(180deg); }
+
+.receipt .stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  border: 2.5px solid var(--caramel);
+  color: var(--caramel);
+  margin: 4px auto 16px;
+  transform: rotate(-4deg);
+}
+.receipt .stamp .price { font-family: "Fraunces", serif; font-size: 26px; font-weight: 700; line-height: 1; }
+.receipt .stamp .unit { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
+
+.receipt .line {
+  display: flex;
+  justify-content: space-between;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  padding: 4px 0;
+  color: var(--cocoa-soft);
+}
+.receipt .line.total {
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+  padding-top: 10px;
+  color: var(--cocoa);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--cocoa);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+.toast.error { background: var(--danger); }
+
+@media (max-width: 560px) {
+  .row { grid-template-columns: 1fr; }
+  .item-row { grid-template-columns: 1fr 90px auto; }
+}
