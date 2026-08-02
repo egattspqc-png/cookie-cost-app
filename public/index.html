@@ -1,1 +1,90 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คำนวณราคาต้นทุนคุกกี้</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell">
+  <header class="top">
+    <div class="brand">
+      <span class="mark">🍪 Cookie Ledger</span>
+      <span class="tag">คำนวณต้นทุนคุกกี้</span>
+    </div>
+  </header>
+  <div id="nav-slot"></div>
 
+  <div class="card">
+    <h2>เลือกคุกกี้</h2>
+    <div class="field">
+      <label for="cookie-select">ชื่อคุกกี้</label>
+      <select id="cookie-select"></select>
+    </div>
+  </div>
+
+  <div id="result-area"></div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+renderNav("index.html");
+
+let cookies = [];
+
+function renderReceipt(c) {
+  const rows = [
+    { label: `เนื้อเบส (${c.base_name}) · ${fmtG(c.base_weight_g)} ก.`, cost: c.base_cost },
+    ...c.toppings.map((t) => ({
+      label: `${t.ingredient_name} · ${fmtG(t.weight_g)} ก.`,
+      cost: (t.price_per_kg / 1000) * t.weight_g,
+    })),
+  ];
+
+  document.querySelector("#result-area").innerHTML = `
+    <div class="card receipt">
+      <div style="text-align:center">
+        <div class="stamp">
+          <div class="price">฿${fmtBaht(c.total_cost)}</div>
+          <div class="unit">ต่อชิ้น</div>
+        </div>
+      </div>
+      <h3 style="text-align:center;margin-bottom:2px">${c.name}</h3>
+      <p style="text-align:center;color:var(--cocoa-soft);font-size:12.5px;margin:0 0 14px">
+        น้ำหนักรวม ${fmtG(c.total_weight_g)} กรัม/ชิ้น
+      </p>
+      ${rows.map((r) => `<div class="line"><span>${r.label}</span><span>฿${fmtBaht(r.cost)}</span></div>`).join("")}
+      <div class="line total"><span>ต้นทุนรวมต่อชิ้น</span><span>฿${fmtBaht(c.total_cost)}</span></div>
+    </div>
+  `;
+}
+
+async function load() {
+  const select = document.querySelector("#cookie-select");
+  try {
+    cookies = await api.cookies.list();
+  } catch (e) {
+    toast(e.message, true);
+    return;
+  }
+
+  if (cookies.length === 0) {
+    select.innerHTML = `<option value="">— ยังไม่มีคุกกี้ —</option>`;
+    document.querySelector("#result-area").innerHTML = `
+      <div class="card"><div class="empty">ยังไม่มีรายชื่อคุกกี้ ไปที่แท็บ "รายชื่อคุกกี้" เพื่อเพิ่มก่อน</div></div>`;
+    return;
+  }
+
+  select.innerHTML = cookies.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+  select.addEventListener("change", () => {
+    const c = cookies.find((x) => String(x.id) === select.value);
+    if (c) renderReceipt(c);
+  });
+  renderReceipt(cookies[0]);
+}
+
+load();
+</script>
+</body>
+</html>
