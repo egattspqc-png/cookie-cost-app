@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ส่วนผสม — Cookie Ledger</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell">
+  <header class="top">
+    <div class="brand">
+      <span class="mark">🍪 Cookie Ledger</span>
+      <span class="tag">รายชื่อส่วนผสม</span>
+    </div>
+  </header>
+  <div id="nav-slot"></div>
+
+  <div class="card">
+    <h2 id="form-title">เพิ่มส่วนผสมใหม่</h2>
+    <form id="ing-form">
+      <div class="row">
+        <div class="field">
+          <label for="f-name">ชื่อส่วนผสม</label>
+          <input id="f-name" type="text" placeholder="เช่น เนยจืด" required />
+        </div>
+        <div class="field">
+          <label for="f-price">ราคาต่อกิโลกรัม (บาท)</label>
+          <input id="f-price" type="number" step="0.01" min="0" placeholder="0.00" required />
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-weight">น้ำหนักมาตรฐานต่อครั้ง (กรัม) — ไม่บังคับ</label>
+        <input id="f-weight" type="number" step="0.1" min="0" placeholder="เช่น 100 (ใช้เป็นค่าตั้งต้นตอนใส่ในสูตร)" />
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn-primary" id="submit-btn">เพิ่มส่วนผสม</button>
+        <button type="button" class="btn-ghost" id="cancel-btn" style="display:none">ยกเลิกแก้ไข</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>รายการส่วนผสมทั้งหมด</h2>
+    <div id="list-area"></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+renderNav("ingredients.html");
+
+let editingId = null;
+
+function resetForm() {
+  editingId = null;
+  document.querySelector("#ing-form").reset();
+  document.querySelector("#form-title").textContent = "เพิ่มส่วนผสมใหม่";
+  document.querySelector("#submit-btn").textContent = "เพิ่มส่วนผสม";
+  document.querySelector("#cancel-btn").style.display = "none";
+}
+
+function startEdit(item) {
+  editingId = item.id;
+  document.querySelector("#f-name").value = item.name;
+  document.querySelector("#f-price").value = item.price_per_kg;
+  document.querySelector("#f-weight").value = item.default_weight_g ?? "";
+  document.querySelector("#form-title").textContent = `แก้ไข: ${item.name}`;
+  document.querySelector("#submit-btn").textContent = "บันทึกการแก้ไข";
+  document.querySelector("#cancel-btn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function renderList() {
+  const area = document.querySelector("#list-area");
+  let items;
+  try {
+    items = await api.ingredients.list();
+  } catch (e) {
+    toast(e.message, true);
+    return;
+  }
+  if (items.length === 0) {
+    area.innerHTML = `<div class="empty">ยังไม่มีส่วนผสม เพิ่มรายการแรกด้านบน</div>`;
+    return;
+  }
+  area.innerHTML = `
+    <table class="list-table">
+      <thead><tr><th>ชื่อ</th><th class="num">ราคา/กก.</th><th class="num">น้ำหนักมาตรฐาน</th><th></th></tr></thead>
+      <tbody>
+        ${items
+          .map(
+            (it) => `
+          <tr>
+            <td>${it.name}</td>
+            <td class="num mono">฿${fmtBaht(it.price_per_kg)}</td>
+            <td class="num mono">${it.default_weight_g != null ? fmtG(it.default_weight_g) + " ก." : "—"}</td>
+            <td class="actions">
+              <button class="btn-ghost btn-small" data-edit="${it.id}">แก้ไข</button>
+              <button class="btn-danger btn-small" data-del="${it.id}">ลบ</button>
+            </td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+
+  area.querySelectorAll("[data-edit]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const item = items.find((x) => x.id === Number(btn.dataset.edit));
+      if (item) startEdit(item);
+    })
+  );
+  area.querySelectorAll("[data-del]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      const item = items.find((x) => x.id === Number(btn.dataset.del));
+      if (!confirm(`ลบส่วนผสม "${item.name}" ใช่หรือไม่?`)) return;
+      try {
+        await api.ingredients.remove(item.id);
+        toast("ลบส่วนผสมแล้ว");
+        if (editingId === item.id) resetForm();
+        renderList();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    })
+  );
+}
+
+document.querySelector("#ing-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    name: document.querySelector("#f-name").value.trim(),
+    price_per_kg: parseFloat(document.querySelector("#f-price").value),
+    default_weight_g: document.querySelector("#f-weight").value
+      ? parseFloat(document.querySelector("#f-weight").value)
+      : null,
+  };
+  try {
+    if (editingId) {
+      await api.ingredients.update(editingId, body);
+      toast("บันทึกการแก้ไขแล้ว");
+    } else {
+      await api.ingredients.create(body);
+      toast("เพิ่มส่วนผสมแล้ว");
+    }
+    resetForm();
+    renderList();
+  } catch (e) {
+    toast(e.message, true);
+  }
+});
+
+document.querySelector("#cancel-btn").addEventListener("click", resetForm);
+
+renderList();
+</script>
+</body>
+</html>
