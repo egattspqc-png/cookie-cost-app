@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>รายชื่อคุกกี้ — Cookie Ledger</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell">
+  <header class="top">
+    <div class="brand">
+      <span class="mark">🍪 Cookie Ledger</span>
+      <span class="tag">รายชื่อคุกกี้</span>
+    </div>
+  </header>
+  <div id="nav-slot"></div>
+
+  <div class="card">
+    <h2 id="form-title">เพิ่มคุกกี้ใหม่</h2>
+    <form id="cookie-form">
+      <div class="field">
+        <label for="f-name">ชื่อคุกกี้</label>
+        <input id="f-name" type="text" placeholder="เช่น คุกกี้ช็อกโกแลตชิพ" required />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="f-base">คุกกี้เบส</label>
+          <select id="f-base"></select>
+        </div>
+        <div class="field">
+          <label for="f-base-weight">น้ำหนักเนื้อเบสต่อชิ้น (กรัม)</label>
+          <input id="f-base-weight" type="number" step="0.1" min="0" placeholder="เช่น 25" required />
+        </div>
+      </div>
+      <div class="field">
+        <label>หน้าคุกกี้ (ส่วนผสมเพิ่มเติมเฉพาะคุกกี้นี้) — ไม่บังคับ</label>
+        <div id="topping-area"></div>
+        <button type="button" class="btn-ghost btn-small" id="add-topping-btn" style="width:fit-content;margin-top:4px">+ เพิ่มหน้าคุกกี้</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn-primary" id="submit-btn">บันทึกคุกกี้</button>
+        <button type="button" class="btn-ghost" id="cancel-btn" style="display:none">ยกเลิกแก้ไข</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>รายการคุกกี้ทั้งหมด</h2>
+    <div id="list-area"></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+renderNav("cookies.html");
+
+let bases = [];
+let ingredients = [];
+let editingId = null;
+
+function baseOptions(selectedId) {
+  return bases
+    .map((b) => `<option value="${b.id}" ${b.id === selectedId ? "selected" : ""}>${b.name}</option>`)
+    .join("");
+}
+
+function ingredientOptions(selectedId) {
+  return ingredients
+    .map((i) => `<option value="${i.id}" ${i.id === selectedId ? "selected" : ""}>${i.name}</option>`)
+    .join("");
+}
+
+function addToppingRow(ingredientId = null, weightG = "") {
+  const row = document.createElement("div");
+  row.className = "item-row";
+  row.innerHTML = `
+    <select class="topping-ingredient">${ingredientOptions(ingredientId)}</select>
+    <div><input class="topping-weight" type="number" step="0.1" min="0" placeholder="น้ำหนัก" value="${weightG}" /><span class="weight-suffix">ก.</span></div>
+    <button type="button" class="btn-ghost btn-small remove-item">ลบ</button>
+  `;
+  row.querySelector(".remove-item").addEventListener("click", () => row.remove());
+  document.querySelector("#topping-area").appendChild(row);
+}
+
+function resetForm() {
+  editingId = null;
+  document.querySelector("#cookie-form").reset();
+  document.querySelector("#f-base").innerHTML = baseOptions();
+  document.querySelector("#topping-area").innerHTML = "";
+  document.querySelector("#form-title").textContent = "เพิ่มคุกกี้ใหม่";
+  document.querySelector("#submit-btn").textContent = "บันทึกคุกกี้";
+  document.querySelector("#cancel-btn").style.display = "none";
+}
+
+function startEdit(cookie) {
+  editingId = cookie.id;
+  document.querySelector("#f-name").value = cookie.name;
+  document.querySelector("#f-base").innerHTML = baseOptions(cookie.base_id);
+  document.querySelector("#f-base-weight").value = cookie.base_weight_g;
+  document.querySelector("#topping-area").innerHTML = "";
+  cookie.toppings.forEach((t) => addToppingRow(t.ingredient_id, t.weight_g));
+  document.querySelector("#form-title").textContent = `แก้ไข: ${cookie.name}`;
+  document.querySelector("#submit-btn").textContent = "บันทึกการแก้ไข";
+  document.querySelector("#cancel-btn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function renderList() {
+  const area = document.querySelector("#list-area");
+  let cookies;
+  try {
+    cookies = await api.cookies.list();
+  } catch (e) {
+    toast(e.message, true);
+    return;
+  }
+  if (cookies.length === 0) {
+    area.innerHTML = `<div class="empty">ยังไม่มีคุกกี้ เพิ่มรายการแรกด้านบน</div>`;
+    return;
+  }
+  area.innerHTML = cookies
+    .map(
+      (c) => `
+    <div style="padding:12px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+        <h3>${c.name}</h3>
+        <span class="mono" style="font-size:13px;color:var(--caramel)">฿${fmtBaht(c.total_cost)}/ชิ้น</span>
+      </div>
+      <p style="font-size:12.5px;color:var(--cocoa-soft);margin:2px 0 8px">
+        เบส: ${c.base_name} (${fmtG(c.base_weight_g)} ก.) ${c.toppings.length ? "· หน้า: " + c.toppings.map((t) => t.ingredient_name).join(", ") : ""}
+      </p>
+      <div class="actions">
+        <button class="btn-ghost btn-small" data-edit="${c.id}">แก้ไข</button>
+        <button class="btn-danger btn-small" data-del="${c.id}">ลบ</button>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  area.querySelectorAll("[data-edit]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      try {
+        const cookie = await api.cookies.get(btn.dataset.edit);
+        startEdit(cookie);
+      } catch (e) {
+        toast(e.message, true);
+      }
+    })
+  );
+  area.querySelectorAll("[data-del]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      const cookie = cookies.find((x) => x.id === Number(btn.dataset.del));
+      if (!confirm(`ลบคุกกี้ "${cookie.name}" ใช่หรือไม่?`)) return;
+      try {
+        await api.cookies.remove(cookie.id);
+        toast("ลบคุกกี้แล้ว");
+        if (editingId === cookie.id) resetForm();
+        renderList();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    })
+  );
+}
+
+document.querySelector("#add-topping-btn").addEventListener("click", () => addToppingRow());
+
+document.querySelector("#cookie-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const rows = [...document.querySelectorAll("#topping-area .item-row")];
+  const toppings = rows.map((r) => ({
+    ingredient_id: Number(r.querySelector(".topping-ingredient").value),
+    weight_g: parseFloat(r.querySelector(".topping-weight").value),
+  }));
+  if (toppings.some((t) => !t.ingredient_id || isNaN(t.weight_g))) {
+    toast("กรุณาเลือกส่วนผสมและระบุน้ำหนักให้ครบทุกแถวหน้าคุกกี้", true);
+    return;
+  }
+  const body = {
+    name: document.querySelector("#f-name").value.trim(),
+    base_id: Number(document.querySelector("#f-base").value),
+    base_weight_g: parseFloat(document.querySelector("#f-base-weight").value),
+    toppings,
+  };
+  if (!body.base_id) {
+    toast("กรุณาเพิ่มคุกกี้เบสในแท็บ \"คุกกี้เบส\" ก่อน", true);
+    return;
+  }
+  try {
+    if (editingId) {
+      await api.cookies.update(editingId, body);
+      toast("บันทึกการแก้ไขแล้ว");
+    } else {
+      await api.cookies.create(body);
+      toast("เพิ่มคุกกี้แล้ว");
+    }
+    resetForm();
+    renderList();
+  } catch (e) {
+    toast(e.message, true);
+  }
+});
+
+document.querySelector("#cancel-btn").addEventListener("click", resetForm);
+
+async function init() {
+  try {
+    [bases, ingredients] = await Promise.all([api.bases.list(), api.ingredients.list()]);
+  } catch (e) {
+    toast(e.message, true);
+  }
+  document.querySelector("#f-base").innerHTML = baseOptions();
+  if (bases.length === 0) {
+    document.querySelector("#f-base").innerHTML = `<option value="">— ยังไม่มีคุกกี้เบส —</option>`;
+    document.querySelector("#submit-btn").disabled = true;
+  }
+  if (ingredients.length === 0) {
+    document.querySelector("#add-topping-btn").style.display = "none";
+  }
+  renderList();
+}
+
+init();
+</script>
+</body>
+</html>
