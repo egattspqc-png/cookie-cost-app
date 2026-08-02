@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คุกกี้เบส — Cookie Ledger</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell">
+  <header class="top">
+    <div class="brand">
+      <span class="mark">🍪 Cookie Ledger</span>
+      <span class="tag">คุกกี้เบส</span>
+    </div>
+  </header>
+  <div id="nav-slot"></div>
+
+  <div class="card">
+    <h2 id="form-title">เพิ่มคุกกี้เบสใหม่</h2>
+    <form id="base-form">
+      <div class="field">
+        <label for="f-name">ชื่อคุกกี้เบส</label>
+        <input id="f-name" type="text" placeholder="เช่น เบสบัตเตอร์คุกกี้" required />
+      </div>
+      <div class="field">
+        <label>ส่วนผสมในเบสนี้</label>
+        <div id="items-area"></div>
+        <button type="button" class="btn-ghost btn-small" id="add-item-btn" style="width:fit-content;margin-top:4px">+ เพิ่มส่วนผสม</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn-primary" id="submit-btn">บันทึกคุกกี้เบส</button>
+        <button type="button" class="btn-ghost" id="cancel-btn" style="display:none">ยกเลิกแก้ไข</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>รายการคุกกี้เบสทั้งหมด</h2>
+    <div id="list-area"></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+renderNav("bases.html");
+
+let ingredients = [];
+let editingId = null;
+
+function ingredientOptions(selectedId) {
+  return ingredients
+    .map((i) => `<option value="${i.id}" ${i.id === selectedId ? "selected" : ""}>${i.name}</option>`)
+    .join("");
+}
+
+function addItemRow(ingredientId = null, weightG = "") {
+  const row = document.createElement("div");
+  row.className = "item-row";
+  row.innerHTML = `
+    <select class="item-ingredient">${ingredientOptions(ingredientId)}</select>
+    <div><input class="item-weight" type="number" step="0.1" min="0" placeholder="น้ำหนัก" value="${weightG}" /><span class="weight-suffix">ก.</span></div>
+    <button type="button" class="btn-ghost btn-small remove-item">ลบ</button>
+  `;
+  row.querySelector(".remove-item").addEventListener("click", () => row.remove());
+  document.querySelector("#items-area").appendChild(row);
+}
+
+function resetForm() {
+  editingId = null;
+  document.querySelector("#base-form").reset();
+  document.querySelector("#items-area").innerHTML = "";
+  addItemRow();
+  document.querySelector("#form-title").textContent = "เพิ่มคุกกี้เบสใหม่";
+  document.querySelector("#submit-btn").textContent = "บันทึกคุกกี้เบส";
+  document.querySelector("#cancel-btn").style.display = "none";
+}
+
+function startEdit(base) {
+  editingId = base.id;
+  document.querySelector("#f-name").value = base.name;
+  document.querySelector("#items-area").innerHTML = "";
+  base.items.forEach((it) => addItemRow(it.ingredient_id, it.weight_g));
+  document.querySelector("#form-title").textContent = `แก้ไข: ${base.name}`;
+  document.querySelector("#submit-btn").textContent = "บันทึกการแก้ไข";
+  document.querySelector("#cancel-btn").style.display = "inline-block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function renderList() {
+  const area = document.querySelector("#list-area");
+  let bases;
+  try {
+    bases = await api.bases.list();
+  } catch (e) {
+    toast(e.message, true);
+    return;
+  }
+  if (bases.length === 0) {
+    area.innerHTML = `<div class="empty">ยังไม่มีคุกกี้เบส เพิ่มรายการแรกด้านบน</div>`;
+    return;
+  }
+  area.innerHTML = bases
+    .map(
+      (b) => `
+    <div style="padding:12px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+        <h3>${b.name}</h3>
+        <span class="mono" style="font-size:13px;color:var(--caramel)">฿${fmtBaht(b.cost_per_g)}/ก. · รวม ฿${fmtBaht(b.total_cost)} (${fmtG(b.total_weight_g)} ก.)</span>
+      </div>
+      <table>
+        <tbody>
+          ${b.items.map((it) => `<tr><td>${it.ingredient_name}</td><td class="num mono">${fmtG(it.weight_g)} ก.</td></tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="actions" style="margin-top:8px">
+        <button class="btn-ghost btn-small" data-edit="${b.id}">แก้ไข</button>
+        <button class="btn-danger btn-small" data-del="${b.id}">ลบ</button>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  area.querySelectorAll("[data-edit]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      try {
+        const base = await api.bases.get(btn.dataset.edit);
+        startEdit(base);
+      } catch (e) {
+        toast(e.message, true);
+      }
+    })
+  );
+  area.querySelectorAll("[data-del]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      const base = bases.find((x) => x.id === Number(btn.dataset.del));
+      if (!confirm(`ลบคุกกี้เบส "${base.name}" ใช่หรือไม่?`)) return;
+      try {
+        await api.bases.remove(base.id);
+        toast("ลบคุกกี้เบสแล้ว");
+        if (editingId === base.id) resetForm();
+        renderList();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    })
+  );
+}
+
+document.querySelector("#add-item-btn").addEventListener("click", () => addItemRow());
+
+document.querySelector("#base-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const rows = [...document.querySelectorAll("#items-area .item-row")];
+  const items = rows.map((r) => ({
+    ingredient_id: Number(r.querySelector(".item-ingredient").value),
+    weight_g: parseFloat(r.querySelector(".item-weight").value),
+  }));
+  if (items.length === 0 || items.some((it) => !it.ingredient_id || isNaN(it.weight_g))) {
+    toast("กรุณาเลือกส่วนผสมและระบุน้ำหนักให้ครบทุกแถว", true);
+    return;
+  }
+  const body = { name: document.querySelector("#f-name").value.trim(), items };
+  try {
+    if (editingId) {
+      await api.bases.update(editingId, body);
+      toast("บันทึกการแก้ไขแล้ว");
+    } else {
+      await api.bases.create(body);
+      toast("เพิ่มคุกกี้เบสแล้ว");
+    }
+    resetForm();
+    renderList();
+  } catch (e) {
+    toast(e.message, true);
+  }
+});
+
+document.querySelector("#cancel-btn").addEventListener("click", resetForm);
+
+async function init() {
+  try {
+    ingredients = await api.ingredients.list();
+  } catch (e) {
+    toast(e.message, true);
+  }
+  if (ingredients.length === 0) {
+    document.querySelector("#items-area").innerHTML = `<div class="empty">กรุณาเพิ่มส่วนผสมในแท็บ "ส่วนผสม" ก่อน</div>`;
+    document.querySelector("#add-item-btn").style.display = "none";
+    document.querySelector("#submit-btn").disabled = true;
+  } else {
+    addItemRow();
+  }
+  renderList();
+}
+
+init();
+</script>
+</body>
+</html>
