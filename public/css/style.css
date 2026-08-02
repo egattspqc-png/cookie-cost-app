@@ -179,13 +179,40 @@ td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; }
 
 .item-row {
   display: grid;
-  grid-template-columns: 1fr 110px auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 110px) auto;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.item-row .weight-suffix { font-size: 12px; color: var(--cocoa-soft); margin-left: 4px; }
+.item-row select,
+.item-row > div {
+  min-width: 0;
+}
+
+.item-row select {
+  width: 100%;
+}
+
+.item-row > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.item-row input.item-weight,
+.item-row input.topping-weight {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.item-row .weight-suffix { font-size: 12px; color: var(--cocoa-soft); margin-left: 0; flex-shrink: 0; }
+
+@media (max-width: 420px) {
+  .item-row { grid-template-columns: minmax(0, 1fr) minmax(0, 84px) auto; }
+}
 
 .empty {
   color: var(--cocoa-soft);
@@ -268,5 +295,4 @@ td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; }
 
 @media (max-width: 560px) {
   .row { grid-template-columns: 1fr; }
-  .item-row { grid-template-columns: 1fr 90px auto; }
 }
